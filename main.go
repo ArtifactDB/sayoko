@@ -4,6 +4,7 @@ import (
     "os"
     "flag"
     "log"
+    "fmt"
     "time"
     "sync"
     "strings"
@@ -45,11 +46,17 @@ func main() {
     surl := flag.String("url", "", "URL of the SewerRat instance")
     log_time := flag.Int("log", 10, "Interval in which to check for new logs, in minutes")
     full_time := flag.Int("full", 24, "Interval in which to do a full check, in hours")
+    flag.Parse()
 
     registry := *gpath
     rest_url := *surl
     if registry == "" || rest_url == "" {
         flag.Usage()
+        os.Exit(1)
+    }
+
+    if !filepath.IsAbs(registry) {
+        fmt.Println("expected an absolute file path for the registry")
         os.Exit(1)
     }
 

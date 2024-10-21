@@ -15,9 +15,9 @@ Each project modified in this manner is then re-registered in SewerRat index, pr
 ## Instructions
 
 The usual `go build .` command produces the `sayoko` binary.
-We can then run it with:
+We can then run it as shown below, using an account that has write permissions to the Gobbler registry.
 
-```
+```bash
 ./sayoko \
     -registry PATH_TO_GOBBLER_REGISTRY
     -url URL_FOR_SEWERRAT_REST_API
@@ -26,7 +26,9 @@ We can then run it with:
 By default, this will scan the log directory every 10 minutes and will do a full registry check every 24 hours.
 These intervals can be modified with the `-log` and `-full` flags, respectively.
 
-It is assumed that the account running `sayoko` has write permissions on the Gobbler registry.
+After every log scan, **sayoko** produces a `.sayoko_last_scan` file containing the RFC3339-formatted time of the most recent log.
+This avoids redundant re-processing of the same log files when **sayoko** itself is restarted.
+Advanced users can exploit this by modifying the timestamp in this file to force **sayoko** to process logs after a desired timepoint.
 
 ## Developer notes
 

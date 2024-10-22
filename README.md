@@ -29,6 +29,7 @@ These intervals can be modified with the `-log` and `-full` flags, respectively.
 After every log scan, **sayoko** produces a `.sayoko_last_scan` file containing the RFC3339-formatted time of the most recent log.
 This avoids redundant re-processing of the same log files when **sayoko** itself is restarted.
 Advanced users can exploit this by modifying the timestamp in this file to force **sayoko** to process logs after a desired timepoint.
+The path of this timestamp file can also be modified via the `-timestamp` flag.
 
 ## Developer notes
 

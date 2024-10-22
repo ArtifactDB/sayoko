@@ -12,9 +12,7 @@ import (
     "errors"
 )
 
-const last_scan_path = ".sayoko_last_scan"
-
-func retrieveLastScanTime() time.Time {
+func retrieveLastScanTime(last_scan_path string) time.Time {
     last_scan_raw, err := os.ReadFile(last_scan_path)
     if err == nil {
         candidate, err := time.Parse(time.RFC3339, string(last_scan_raw))
@@ -29,7 +27,7 @@ func retrieveLastScanTime() time.Time {
     return time.Now()
 }
 
-func depositLastScanTime(last_scan time.Time) {
+func depositLastScanTime(last_scan time.Time, last_scan_path string) {
     err := os.WriteFile(last_scan_path, []byte(last_scan.Format(time.RFC3339)), 0644)
     if err != nil {
         log.Printf("failed to write the last scan time; %v", err)
@@ -46,6 +44,7 @@ func main() {
     surl := flag.String("url", "", "URL of the SewerRat instance")
     log_time := flag.Int("log", 10, "Interval in which to check for new logs, in minutes")
     full_time := flag.Int("full", 24, "Interval in which to do a full check, in hours")
+    tpath := flag.String("timestamp", ".sayoko_last_scan", "Path to the last scan timestamp")
     flag.Parse()
 
     registry := *gpath
@@ -68,7 +67,8 @@ func main() {
 
     // Timer to inspect logs.
     go func() {
-        last_scan := retrieveLastScanTime()
+        last_scan_path := *tpath
+        last_scan := retrieveLastScanTime(last_scan_path)
         timer := time.NewTicker(time.Minute * time.Duration(*log_time))
         for {
             <-timer.C
@@ -79,7 +79,7 @@ func main() {
                 log.Printf("detected failures for log check; %v", err)
             }
             last_scan = new_last_scan // this can be set regardless of 'err'.
-            depositLastScanTime(last_scan)
+            depositLastScanTime(last_scan, last_scan_path)
             ch_reignore <- true
         }
     }()

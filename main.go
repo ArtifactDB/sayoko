@@ -78,8 +78,10 @@ func main() {
             if err != nil {
                 log.Printf("detected failures for log check; %v", err)
             }
-            last_scan = new_last_scan // this can be set regardless of 'err'.
-            depositLastScanTime(last_scan, last_scan_path)
+            if last_scan != new_last_scan { // new_last_scan can be used regardless of 'err'.
+                last_scan = new_last_scan
+                depositLastScanTime(last_scan, last_scan_path)
+            }
             ch_reignore <- true
         }
     }()

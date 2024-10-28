@@ -9,15 +9,18 @@ import (
 )
 
 type latestPayload struct {
-    Latest string `json:"latest"`
+    Version string `json:"version"`
 }
 
 func readLatestFile(lat_path string) (latestPayload, error) {
     output := latestPayload{}
-
-    handle, err := os.Open(lat_path)
     if _, err := os.Stat(lat_path); errors.Is(err, os.ErrNotExist) {
         return output, nil
+    }
+
+    handle, err := os.Open(lat_path)
+    if err != nil {
+        return output, fmt.Errorf("failed to open %q; %w", lat_path, err)
     }
     defer handle.Close()
 
@@ -55,7 +58,7 @@ func ignoreNonLatest(registry, project, asset string) (bool, error) {
         ipath := filepath.Join(asset_dir, v, ".SewerRatignore")
         _, err := os.Stat(ipath)
 
-        if v == payload.Latest {
+        if v == payload.Version {
             if !errors.Is(err, os.ErrNotExist) {
                 changed = true
                 err := os.Remove(ipath)

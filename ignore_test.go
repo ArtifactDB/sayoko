@@ -18,11 +18,11 @@ func TestReadLatestFile(t *testing.T) {
     if err != nil {
         t.Fatalf("failed to read the ..latest file; %v", err)
     }
-    if latest.Latest != "" {
+    if latest.Version != "" {
         t.Fatalf("..latest file should be absent; %v", err)
     }
 
-    err = os.WriteFile(lat_path, []byte("{ \"latest\": \"foobar\" }"), 0644)
+    err = os.WriteFile(lat_path, []byte("{ \"version\": \"foobar\" }"), 0644)
     if err != nil {
         t.Fatalf("failed to write to the ..latest file; %v", err)
     }
@@ -31,7 +31,7 @@ func TestReadLatestFile(t *testing.T) {
     if err != nil {
         t.Fatalf("failed to read the ..latest file; %v", err)
     }
-    if latest.Latest != "foobar" {
+    if latest.Version != "foobar" {
         t.Fatalf("unexpected latest version %q", latest)
     }
 }
@@ -57,7 +57,7 @@ func TestIgnoreNonLatest(t *testing.T) {
     }
 
     lat_path := filepath.Join(asset_dir, "..latest")
-    err = os.WriteFile(lat_path, []byte("{ \"latest\": \"3\" }"), 0644)
+    err = os.WriteFile(lat_path, []byte("{ \"version\": \"3\" }"), 0644)
     if err != nil {
         t.Fatalf("failed to write to the ..latest file; %v", err)
     }
@@ -99,7 +99,7 @@ func TestIgnoreNonLatest(t *testing.T) {
         }
     })
 
-    err = os.WriteFile(lat_path, []byte("{ \"latest\": \"1\" }"), 0644)
+    err = os.WriteFile(lat_path, []byte("{ \"version\": \"1\" }"), 0644)
     if err != nil {
         t.Fatalf("failed to update the ..latest file; %v", err)
     }

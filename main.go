@@ -71,7 +71,6 @@ func main() {
         last_scan := retrieveLastScanTime(last_scan_path)
         timer := time.NewTicker(time.Minute * time.Duration(*log_time))
         for {
-            <-timer.C
             lock.Lock()
             new_last_scan, err := checkLogs(registry, rest_url, to_reignore, to_reregister, last_scan)
             lock.Unlock()
@@ -83,6 +82,7 @@ func main() {
                 depositLastScanTime(last_scan, last_scan_path)
             }
             ch_reignore <- true
+            <-timer.C
         }
     }()
 
@@ -90,7 +90,6 @@ func main() {
     go func() {
         timer := time.NewTicker(time.Hour * time.Duration(*full_time))
         for {
-            <-timer.C
             lock.Lock()
             err := fullScan(registry, rest_url, to_reignore)
             lock.Unlock()
@@ -98,6 +97,7 @@ func main() {
                 log.Printf("detected failures for log check; %v", err)
             }
             ch_reignore <- true
+            <-timer.C
         }
     }()
 

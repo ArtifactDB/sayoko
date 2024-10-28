@@ -2,6 +2,7 @@ package main
 
 import (
     "os"
+    "io/fs"
     "path/filepath"
     "errors"
     "fmt"
@@ -17,6 +18,9 @@ func fullScan(registry string, url string, to_reignore map[string]bool) error {
 
     for _, proj := range contents {
         if !proj.IsDir() {
+            continue
+        }
+        if proj.Type() & fs.ModeSymlink != 0 { // skip symlinked aliases of versions.
             continue
         }
 

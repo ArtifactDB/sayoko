@@ -14,7 +14,7 @@ func TestReadLog(t *testing.T) {
     }
 
     log_path := filepath.Join(logdir, time.Now().Format(time.RFC3339) + "_111111")
-    err = os.WriteFile(log_path, []byte("{ \"action\": \"add-version\", \"project\": \"foo\", \"asset\": \"bar\" }"), 0644)
+    err = os.WriteFile(log_path, []byte("{ \"type\": \"add-version\", \"project\": \"foo\", \"asset\": \"bar\" }"), 0644)
     if err != nil {
         t.Fatalf("failed to create a new log file; %v", err)
     }
@@ -23,7 +23,7 @@ func TestReadLog(t *testing.T) {
     if err != nil {
         t.Fatalf("failed to read the log file; %v", err)
     }
-    if loginfo.Action != "add-version" || loginfo.Project != "foo" || loginfo.Asset != "bar" {
+    if loginfo.Type != "add-version" || loginfo.Project != "foo" || loginfo.Asset != "bar" {
         t.Fatal("unexpected contents of the log file")
     }
 }
@@ -42,19 +42,19 @@ func TestCheckLogs(t *testing.T) {
     }
 
     log_path := filepath.Join(logdir, "2022-02-22T02:22:22Z_111111")
-    err = os.WriteFile(log_path, []byte("{ \"action\": \"add-version\", \"project\": \"foo\", \"asset\": \"bar\", \"version\": \"1\" }"), 0644)
+    err = os.WriteFile(log_path, []byte("{ \"type\": \"add-version\", \"project\": \"foo\", \"asset\": \"bar\", \"version\": \"1\" }"), 0644)
     if err != nil {
         t.Fatalf("failed to create a new log file; %v", err)
     }
 
     log_path = filepath.Join(logdir, "2023-03-23T02:22:22Z_111111")
-    err = os.WriteFile(log_path, []byte("{ \"action\": \"delete-version\", \"project\": \"foo\", \"asset\": \"whee\", \"version\": \"1\" }"), 0644)
+    err = os.WriteFile(log_path, []byte("{ \"type\": \"delete-version\", \"project\": \"foo\", \"asset\": \"whee\", \"version\": \"1\" }"), 0644)
     if err != nil {
         t.Fatalf("failed to create a new log file; %v", err)
     }
 
     log_path = filepath.Join(logdir, "2024-04-24T02:22:22Z_111111")
-    err = os.WriteFile(log_path, []byte("{ \"action\": \"delete-asset\", \"project\": \"shibuya\", \"asset\": \"kanon\" }"), 0644)
+    err = os.WriteFile(log_path, []byte("{ \"type\": \"delete-asset\", \"project\": \"shibuya\", \"asset\": \"kanon\" }"), 0644)
     if err != nil {
         t.Fatalf("failed to create a new log file; %v", err)
     }

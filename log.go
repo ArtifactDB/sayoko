@@ -11,7 +11,7 @@ import (
 )
 
 type logPayload struct {
-    Action string `json:"action"`
+    Type string `json:"type"`
     Project string `json:"project"`
     Asset string `json:"asset"`
 }
@@ -78,7 +78,7 @@ func checkLogs(registry string, rest_url string, to_reignore map[string]bool, to
             continue
         }
 
-        if payload.Action == "add-version" || payload.Action == "delete-version" {
+        if payload.Type == "add-version" || payload.Type == "delete-version" {
             if payload.Project == "" || payload.Asset == "" {
                 all_errors = append(all_errors, fmt.Errorf("empty project/asset fields in %q", logpath))
                 continue

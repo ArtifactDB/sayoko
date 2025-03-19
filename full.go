@@ -20,12 +20,6 @@ func fullScan(rest_url string, registry string) error {
         }
         project := proj.Name()
         project_dir := filepath.Join(registry, project)
-        if isDirectorySkipped(project_dir) {
-            err := deregisterAllSubdirectories(rest_url, project_dir)
-            all_errors = append(all_errors, err)
-            continue
-        }
-
         asses, err := os.ReadDir(project_dir)
         if err != nil {
             all_errors = append(all_errors, fmt.Errorf("failed to list assets for project %q; %w", project, err))
@@ -37,13 +31,7 @@ func fullScan(rest_url string, registry string) error {
                 continue
             }
             asset := ass.Name()
-            asset_dir := filepath.Join(registry, asset)
-            if isDirectorySkipped(asset_dir) {
-                err := deregisterAllSubdirectories(rest_url, asset_dir)
-                all_errors = append(all_errors, err)
-                continue
-            }
-
+            asset_dir := filepath.Join(project_dir, asset)
             err := ignoreNonLatest(rest_url, asset_dir)
             all_errors = append(all_errors, err)
         }
@@ -51,7 +39,7 @@ func fullScan(rest_url string, registry string) error {
 
     // Put this _after_ we check that we can list the contents of the registry,
     // to avoid premature deregistration upon sporadic unmounting of the registry's FS.
-    err = deregisterUnusedSubdirectories(rest_url, registry)
+    err = deregisterMissingSubdirectories(rest_url, registry)
     if err != nil {
         all_errors = append(all_errors, err)
     }

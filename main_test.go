@@ -14,10 +14,3 @@ func TestLastScanTime(t *testing.T) {
         t.Fatalf("incorrect time value after a roundtrip (%v vs %v)", last_scan, retrieved)
     }
 }
-
-func TestUnpackKey(t *testing.T) {
-    project, asset := unpackKey("foo/bar")
-    if project != "foo" || asset != "bar" {
-        t.Fatalf("unexpected project/asset split")
-    }
-}

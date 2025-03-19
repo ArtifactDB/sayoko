@@ -7,7 +7,6 @@ import (
     "fmt"
     "time"
     "sync"
-    "strings"
     "path/filepath"
     "errors"
 )
@@ -32,11 +31,6 @@ func depositLastScanTime(last_scan time.Time, last_scan_path string) {
     if err != nil {
         log.Printf("failed to write the last scan time; %v", err)
     }
-}
-
-func unpackKey(key string) (string, string) {
-    pos := strings.IndexByte(key, '/')
-    return key[:pos], key[(pos + 1):]
 }
 
 func main() {

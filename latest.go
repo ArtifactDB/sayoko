@@ -40,7 +40,7 @@ func ignoreNonLatest(rest_url, asset_dir string) error {
         return err
     }
 
-    registered_versions, err := listRegisteredSubdirectories(asset_dir, rest_url)
+    registered_versions, err := listRegisteredSubdirectories(rest_url, asset_dir)
     if err != nil {
         return fmt.Errorf("failed to list registered versions of %q; %w", asset_dir, err)
     }

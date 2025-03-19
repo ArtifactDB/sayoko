@@ -83,15 +83,7 @@ func processLogs(rest_url string, registry string, last_scan time.Time) (time.Ti
                 all_errors = append(all_errors, fmt.Errorf("empty project/asset fields in %q", logpath))
                 continue
             }
-            project_dir := filepath.Join(registry, payload.Project)
-            if isDirectorySkipped(project_dir) {
-                continue
-            }
-            asset_dir := filepath.Join(project_dir, payload.Asset)
-            if isDirectorySkipped(asset_dir) {
-                continue
-            }
-            err := ignoreNonLatest(rest_url, asset_dir)
+            err := ignoreNonLatest(rest_url, filepath.Join(registry, payload.Project, payload.Asset))
             all_errors = append(all_errors, err)
 
         } else if payload.Type == "delete-asset" {
@@ -99,11 +91,7 @@ func processLogs(rest_url string, registry string, last_scan time.Time) (time.Ti
                 all_errors = append(all_errors, fmt.Errorf("empty project/asset fields in %q", logpath))
                 continue
             }
-            project_dir := filepath.Join(registry, payload.Project)
-            if isDirectorySkipped(project_dir) {
-                continue
-            }
-            err := deregisterAllSubdirectories(rest_url, filepath.Join(project_dir, payload.Asset))
+            err := deregisterAllSubdirectories(rest_url, filepath.Join(registry, payload.Project, payload.Asset))
             all_errors = append(all_errors, err)
 
         } else if payload.Type == "delete-project" {
@@ -111,8 +99,7 @@ func processLogs(rest_url string, registry string, last_scan time.Time) (time.Ti
                 all_errors = append(all_errors, fmt.Errorf("empty project field in %q", logpath))
                 continue
             }
-            project_dir := filepath.Join(registry, payload.Project)
-            err := deregisterAllSubdirectories(rest_url, project_dir)
+            err := deregisterAllSubdirectories(rest_url, filepath.Join(registry, payload.Project))
             all_errors = append(all_errors, err)
         }
     }

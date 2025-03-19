@@ -44,12 +44,6 @@ func parseFailure(resp *http.Response) error {
     return fmt.Errorf("unknown content type %q for error response (%q)", ct, resp.StatusCode)
 }
 
-func isDirectorySkipped(dir string) bool {
-    test_path := filepath.Join(dir, ".SewerRatignore")
-    _, err := os.Stat(test_path)
-    return err == nil || !errors.Is(err, os.ErrNotExist)
-}
-
 type registeredDirectory struct {
     Path string `json:"path"`
 }
@@ -177,7 +171,7 @@ func deregisterAllSubdirectories(rest_url, dir string) error {
     return errors.Join(all_errors...)
 }
 
-func deregisterUnusedSubdirectories(rest_url, dir string) error {
+func deregisterMissingSubdirectories(rest_url, dir string) error {
     prefix := dir + "/"
     output, err := listRegisteredDirectoriesRaw(rest_url + "/registered?path_prefix=" + url.QueryEscape(prefix) + "&exists=false")
     if err != nil {

@@ -44,99 +44,149 @@ func parseFailure(resp *http.Response) error {
     return fmt.Errorf("unknown content type %q for error response (%q)", ct, resp.StatusCode)
 }
 
-func isProjectRegistered(registry string, rest_url string, project string) (bool, error) {
-    path := filepath.Join(registry, project)
-    resp, err := http.Get(rest_url + "/registered?contains_path=" + url.QueryEscape(path))
+func isDirectorySkipped(dir string) bool {
+    test_path := filepath.Join(dir, ".SewerRatignore")
+    _, err := os.Stat(test_path)
+    return err == nil || !errors.Is(err, os.ErrNotExist)
+}
+
+type registeredDirectory struct {
+    Path string `json:"path"`
+}
+
+func listRegisteredDirectoriesRaw(url string) ([]registeredDirectory, error) {
+    resp, err := http.Get(url)
     if err != nil {
-        return false, fmt.Errorf("failed to check if %q is registered; %w", project, err)
+        return nil, err
     }
     defer resp.Body.Close()
 
     if resp.StatusCode != 200 {
         err := parseFailure(resp)
-        return false, fmt.Errorf("failed to check if %q is registered; %w", project, err)
+        return nil, err
     }
 
     dec := json.NewDecoder(resp.Body)
-    output := []interface{}{}
+    output := []registeredDirectory{}
     err = dec.Decode(&output)
     if err != nil {
-        return false, fmt.Errorf("failed to parse /registered response; %w", err)
+        return nil, err
     }
 
-    return len(output) > 0, nil
+    return output, err
 }
 
-func isProjectRegisteredWithCache(registry string, url string, project string, cache map[string]bool) (bool, error) {
-    is_reg, ok := cache[project]
-    if ok {
-        return is_reg, nil
-    }
-
-    is_reg, err := isProjectRegistered(registry, url, project)
+func listRegisteredSubdirectories(rest_url, dir string) ([]string, error) {
+    prefix := dir + "/"
+    output, err := listRegisteredDirectoriesRaw(rest_url + "/registered?path_prefix=" + url.QueryEscape(prefix))
     if err != nil {
-        return is_reg, err
+        return nil, fmt.Errorf("failed to list subdirectories of %q; %w", dir, err)
     }
-
-    cache[project] = is_reg
-    return is_reg, err
+    collected := []string{}
+    for _, val := range output {
+        rel, err := filepath.Rel(prefix, val.Path)
+        if err == nil && filepath.IsLocal(rel) {
+            collected = append(collected, rel)
+        }
+    }
+    return collected, nil
 }
 
-func reregisterProject(rest_url string, project_dir string) error {
+func registerDirectory(rest_url, dir string, register bool) error {
+    endpt := "register"
+    msg := "registration"
+    if !register {
+        endpt = "deregister"
+        msg = "deregistration"
+    }
+
     {
-        b, err := json.Marshal(map[string]string{ "path": project_dir })
+        b, err := json.Marshal(map[string]string{ "path": dir })
         if err != nil {
-            return fmt.Errorf("failed to create initialization request body for %q; %w", project_dir, err)
+            return fmt.Errorf("failed to create initialization request body for %q; %w", dir, err)
         }
 
         r := bytes.NewReader(b)
-        resp, err := http.Post(rest_url + "/register/start", "application/json", r)
+        resp, err := http.Post(rest_url + "/" + endpt + "/start", "application/json", r)
         if err != nil {
-            return fmt.Errorf("failed to initialize registration for %q; %w", project_dir, err)
+            return fmt.Errorf("failed to initialize %s for %q; %w", msg, dir, err)
         }
         defer resp.Body.Close()
 
         if resp.StatusCode >= 300 {
             err := parseFailure(resp)
-            return fmt.Errorf("failed to initialize registration for %q; %w", project_dir, err)
+            return fmt.Errorf("failed to initialize %s for %q; %w", msg, dir, err)
         }
 
         decoded := struct {
             Code string `json:"code"`
+            Status string `json:"status"`
         }{}
         dec := json.NewDecoder(resp.Body)
         err = dec.Decode(&decoded)
         if err != nil {
-            return fmt.Errorf("failed to parse initialization response for %q; %w", project_dir, err) 
+            return fmt.Errorf("failed to parse initialization response for %q; %w", dir, err) 
         }
 
-        code_path := filepath.Join(project_dir, decoded.Code)
+        if !register && decoded.Status == "SUCCESS" {
+            return nil
+        }
+
+        code_path := filepath.Join(dir, decoded.Code)
         handle, err := os.OpenFile(code_path, os.O_CREATE, 0644)
         if err != nil {
-            return fmt.Errorf("failed to create registration code in %q; %w", project_dir, err)
+            return fmt.Errorf("failed to create %s code in %q; %w", msg, dir, err)
         }
         handle.Close()
         defer os.Remove(code_path)
     }
 
     {
-        b, err := json.Marshal(map[string]string{ "path": project_dir })
+        b, err := json.Marshal(map[string]string{ "path": dir })
         if err != nil {
-            return fmt.Errorf("failed to create registration completion request body for %q; %w", project_dir, err)
+            return fmt.Errorf("failed to create registration completion request body for %q; %w", dir, err)
         }
 
         r := bytes.NewReader(b)
-        resp, err := http.Post(rest_url + "/register/finish", "application/json", r)
+        resp, err := http.Post(rest_url + "/" + endpt + "/finish", "application/json", r)
         if err != nil {
-            return fmt.Errorf("failed to finish registration for %q; %w", project_dir, err)
+            return fmt.Errorf("failed to finish %s for %q; %w", msg, dir, err)
         }
         defer resp.Body.Close()
 
         if resp.StatusCode >= 300 {
             err := parseFailure(resp)
-            return fmt.Errorf("failed to finish registration for %q; %w", project_dir, err)
+            return fmt.Errorf("failed to finish %s for %q; %w", msg, dir, err)
         }
     }
 
     return nil
+}
+
+func deregisterAllSubdirectories(rest_url, dir string) error {
+    prefix := dir + "/"
+    output, err := listRegisteredDirectoriesRaw(rest_url + "/registered?path_prefix=" + url.QueryEscape(prefix))
+    if err != nil {
+        return fmt.Errorf("failed to list subdirectories of %q; %w", dir, err)
+    }
+    all_errors := []error{}
+    for _, val := range output {
+        err := registerDirectory(rest_url, val.Path, false)
+        all_errors = append(all_errors, err)
+    }
+    return errors.Join(all_errors...)
+}
+
+func deregisterUnusedSubdirectories(rest_url, dir string) error {
+    prefix := dir + "/"
+    output, err := listRegisteredDirectoriesRaw(rest_url + "/registered?path_prefix=" + url.QueryEscape(prefix) + "&exists=false")
+    if err != nil {
+        return fmt.Errorf("failed to list subdirectories of %q; %w", dir, err)
+    }
+    all_errors := []error{}
+    for _, val := range output {
+        err := registerDirectory(rest_url, val.Path, false)
+        all_errors = append(all_errors, err)
+    }
+    return errors.Join(all_errors...)
 }

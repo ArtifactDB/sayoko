@@ -83,7 +83,8 @@ func processLogs(rest_url string, registry string, last_scan time.Time) (time.Ti
                 all_errors = append(all_errors, fmt.Errorf("empty project/asset fields in %q", logpath))
                 continue
             }
-            err := ignoreNonLatest(rest_url, filepath.Join(registry, payload.Project, payload.Asset))
+            // Forcibly reregister the latest version just to pick up any changes from reindexing.
+            err := ignoreNonLatest(rest_url, filepath.Join(registry, payload.Project, payload.Asset), (payload.Type == "reindex-version"))
             all_errors = append(all_errors, err)
 
         } else if payload.Type == "delete-asset" {

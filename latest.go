@@ -33,7 +33,7 @@ func readLatestFile(lat_path string) (latestInfo, error) {
     return output, nil
 }
 
-func ignoreNonLatest(rest_url, asset_dir string) error {
+func ignoreNonLatest(rest_url, asset_dir string, force bool) error {
     lat_path := filepath.Join(asset_dir, "..latest")
     payload, err := readLatestFile(lat_path)
     if err != nil {
@@ -46,8 +46,10 @@ func ignoreNonLatest(rest_url, asset_dir string) error {
     }
 
     all_errors := []error{}
+    latest_registered := false
     for _, ver := range registered_versions {
         if ver == payload.Version {
+            latest_registered = true
             continue
         }
         version_dir := filepath.Join(asset_dir, ver)
@@ -57,11 +59,13 @@ func ignoreNonLatest(rest_url, asset_dir string) error {
         }
     }
 
-    if payload.Version != "" {
-        version_dir := filepath.Join(asset_dir, payload.Version)
-        regerr := registerDirectory(rest_url, version_dir, true)
-        if regerr != nil {
-            all_errors = append(all_errors, regerr)
+    if !latest_registered || force {
+        if payload.Version != "" {
+            version_dir := filepath.Join(asset_dir, payload.Version)
+            regerr := registerDirectory(rest_url, version_dir, true)
+            if regerr != nil {
+                all_errors = append(all_errors, regerr)
+            }
         }
     }
 

@@ -32,7 +32,7 @@ func fullScan(rest_url string, registry string) error {
             }
             asset := ass.Name()
             asset_dir := filepath.Join(project_dir, asset)
-            err := ignoreNonLatest(rest_url, asset_dir)
+            err := ignoreNonLatest(rest_url, asset_dir, false) // don't forcibly reregister as any file changes should get picked up by SewerRat's own periodic scans.
             all_errors = append(all_errors, err)
         }
     }

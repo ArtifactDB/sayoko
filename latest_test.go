@@ -4,7 +4,7 @@ import (
     "os"
     "path/filepath"
     "testing"
-//    "errors"
+    "strings"
 )
 
 func TestReadLatestFile(t *testing.T) {
@@ -74,7 +74,7 @@ func TestIgnoreNonLatest(t *testing.T) {
 
     // Simple initial run.
     {
-        err := ignoreNonLatest(url, asset_dir)
+        err := ignoreNonLatest(url, asset_dir, false)
         if err != nil {
             t.Fatal(err)
         }
@@ -96,7 +96,7 @@ func TestIgnoreNonLatest(t *testing.T) {
             t.Fatalf("failed to update the ..latest file; %v", err)
         }
 
-        err = ignoreNonLatest(url, asset_dir)
+        err = ignoreNonLatest(url, asset_dir, false)
         if err != nil {
             t.Fatal(err)
         }
@@ -118,7 +118,7 @@ func TestIgnoreNonLatest(t *testing.T) {
             t.Fatalf("failed to remove the ..latest file; %v", err)
         }
 
-        err := ignoreNonLatest(url, asset_dir)
+        err := ignoreNonLatest(url, asset_dir, false)
         if err != nil {
             t.Fatal(err)
         }
@@ -130,6 +130,51 @@ func TestIgnoreNonLatest(t *testing.T) {
 
         if len(found) != 0 {
             t.Errorf("expected no version to be registered; %v", found)
+        }
+    }
+
+    // Forcibly reregstering.
+    {
+        err := os.WriteFile(lat_path, []byte("{ \"version\": \"3\" }"), 0644)
+        if err != nil {
+            t.Fatalf("failed to write to the ..latest file; %v", err)
+        }
+
+        err = ignoreNonLatest(url, asset_dir, false)
+        if err != nil {
+            t.Fatal(err)
+        }
+        found, err := listRegisteredSubdirectories(url, asset_dir)
+        if err != nil {
+            t.Fatal(err)
+        }
+        if len(found) != 1 || found[0] != "3" {
+            t.Errorf("expected a single version to be registered; %v", found)
+        }
+
+        // We shouldn't get a registration error if we don't force the issue.
+        version_dir := filepath.Join(asset_dir, "3")
+        err = os.RemoveAll(version_dir)
+        if err != nil {
+            t.Fatal(err)
+        }
+
+        err = ignoreNonLatest(url, asset_dir, false)
+        if err != nil {
+            t.Fatal(err)
+        }
+        found, err = listRegisteredSubdirectories(url, asset_dir)
+        if err != nil {
+            t.Fatal(err)
+        }
+        if len(found) != 1 || found[0] != "3" {
+            t.Errorf("expected a single version to be registered; %v", found)
+        }
+
+        // But if we do force it, we should see an error because the directory doesn't exist.
+        err = ignoreNonLatest(url, asset_dir, true)
+        if err == nil || !strings.Contains(err.Error(), "does not exist") {
+            t.Error("expected an error from forced reregistration")
         }
     }
 }

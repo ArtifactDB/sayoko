@@ -71,14 +71,13 @@ func listRegisteredDirectoriesRaw(url string) ([]registeredDirectory, error) {
 }
 
 func listRegisteredSubdirectories(rest_url, dir string) ([]string, error) {
-    prefix := dir + "/"
-    output, err := listRegisteredDirectoriesRaw(rest_url + "/registered?path_prefix=" + url.QueryEscape(prefix))
+    output, err := listRegisteredDirectoriesRaw(rest_url + "/registered?within_path=" + url.QueryEscape(dir))
     if err != nil {
         return nil, fmt.Errorf("failed to list subdirectories of %q; %w", dir, err)
     }
     collected := []string{}
     for _, val := range output {
-        rel, err := filepath.Rel(prefix, val.Path)
+        rel, err := filepath.Rel(dir, val.Path)
         if err == nil && filepath.IsLocal(rel) {
             collected = append(collected, rel)
         }
@@ -158,8 +157,7 @@ func registerDirectory(rest_url, dir string, register bool) error {
 }
 
 func deregisterAllSubdirectories(rest_url, dir string) error {
-    prefix := dir + "/"
-    output, err := listRegisteredDirectoriesRaw(rest_url + "/registered?path_prefix=" + url.QueryEscape(prefix))
+    output, err := listRegisteredDirectoriesRaw(rest_url + "/registered?within_path=" + url.QueryEscape(dir))
     if err != nil {
         return fmt.Errorf("failed to list subdirectories of %q; %w", dir, err)
     }
@@ -172,8 +170,7 @@ func deregisterAllSubdirectories(rest_url, dir string) error {
 }
 
 func deregisterMissingSubdirectories(rest_url, dir string) error {
-    prefix := dir + "/"
-    output, err := listRegisteredDirectoriesRaw(rest_url + "/registered?path_prefix=" + url.QueryEscape(prefix) + "&exists=false")
+    output, err := listRegisteredDirectoriesRaw(rest_url + "/registered?within_path=" + url.QueryEscape(dir) + "&exists=false")
     if err != nil {
         return fmt.Errorf("failed to list subdirectories of %q; %w", dir, err)
     }

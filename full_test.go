@@ -4,6 +4,7 @@ import (
     "testing"
     "os"
     "path/filepath"
+    "sort"
 )
 
 func TestFullScan(t *testing.T) {
@@ -13,65 +14,72 @@ func TestFullScan(t *testing.T) {
     }
 
     // Creating project and asset directories.
-    err = os.Mkdir(filepath.Join(registry, "foo"), 0755)
-    if err != nil {
-        t.Fatalf("failed to create a 'foo' project; %v", err)
-    }
-
-    err = os.Mkdir(filepath.Join(registry, "foo", "bar"), 0755)
+    err = os.MkdirAll(filepath.Join(registry, "foo", "bar", "1"), 0755)
     if err != nil {
         t.Fatalf("failed to create a 'foo/bar' project; %v", err)
     }
-
-    err = os.Mkdir(filepath.Join(registry, "shibuya"), 0755)
+    err = os.WriteFile(filepath.Join(registry, "foo", "bar", "..latest"), []byte("{ \"version\": \"1\" }"), 0644)
     if err != nil {
-        t.Fatalf("failed to create a 'shibuya' project; %v", err)
+        t.Fatal(err)
     }
 
-    err = os.Mkdir(filepath.Join(registry, "shibuya", "kanon"), 0755)
+    err = os.MkdirAll(filepath.Join(registry, "shibuya", "kanon", "2"), 0755)
     if err != nil {
         t.Fatalf("failed to create a 'shibuya/kanon' project; %v", err)
+    }
+    err = os.WriteFile(filepath.Join(registry, "shibuya", "kanon", "..latest"), []byte("{ \"version\": \"2\" }"), 0644)
+    if err != nil {
+        t.Fatal(err)
+    }
+
+    err = os.MkdirAll(filepath.Join(registry, "shibuya", "aria", "1"), 0755)
+    if err != nil {
+        t.Fatalf("failed to create a 'shibuya/kanon' project; %v", err)
+    }
+    err = os.WriteFile(filepath.Join(registry, "shibuya", "aria", "..latest"), []byte("{ \"version\": \"1\" }"), 0644)
+    if err != nil {
+        t.Fatal(err)
     }
 
     url := getSewerRatUrl()
 
-    t.Run("no registered", func(t *testing.T) {
-        to_reignore := map[string]bool{}
-
-        err := fullScan(registry, url, to_reignore)
+    // Initial run registers everything.
+    {
+        err := fullScan(url, registry)
         if err != nil {
-            t.Fatalf("failed to check logs; %v", err)
+            t.Fatal(err)
         }
 
-        if len(to_reignore) > 0 {
-            t.Fatal("expected no action for unregistered projects")
+        found, err := listRegisteredSubdirectories(url, registry)
+        if err != nil {
+            t.Fatal(err)
         }
-    })
 
-    // Now registering everything.
-    err = reregisterProject(url, filepath.Join(registry, "foo"))
-    if err != nil {
-        t.Fatalf("failed to register the 'foo' project; %v", err)
+        sort.Strings(found)
+        if len(found) != 3 || found[0] != "foo/bar/1" || found[1] != "shibuya/aria/1" || found[2] != "shibuya/kanon/2" {
+            t.Errorf("unexpected results after a full scan; %v", found)
+        }
     }
 
-    err = reregisterProject(url, filepath.Join(registry, "shibuya"))
-    if err != nil {
-        t.Fatalf("failed to register the 'shibuya' project; %v", err)
-    }
-
-    t.Run("all registered", func(t *testing.T) {
-        to_reignore := map[string]bool{}
-
-        err := fullScan(registry, url, to_reignore)
+    // Next run deregisters all the shibuya entries.
+    {
+        err := os.RemoveAll(filepath.Join(registry, "shibuya"))
         if err != nil {
-            t.Fatalf("failed to check logs; %v", err)
+            t.Fatal(err)
         }
 
-        if _, ok := to_reignore["foo/bar"]; !ok {
-            t.Fatal("expected 'foo/bar' to be reignored")
+        err = fullScan(url, registry)
+        if err != nil {
+            t.Fatal(err)
         }
-        if _, ok := to_reignore["shibuya/kanon"]; !ok {
-            t.Fatal("expected 'shibuya/kanon' to be reignored")
+
+        found, err := listRegisteredSubdirectories(url, registry)
+        if err != nil {
+            t.Fatal(err)
         }
-    })
+
+        if len(found) != 1 || found[0] != "foo/bar/1" {
+            t.Errorf("unexpected results after a full scan; %v", found)
+        }
+    }
 }

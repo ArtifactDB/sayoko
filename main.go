@@ -7,7 +7,6 @@ import (
     "fmt"
     "time"
     "sync"
-    "strings"
     "path/filepath"
     "errors"
 )
@@ -34,11 +33,6 @@ func depositLastScanTime(last_scan time.Time, last_scan_path string) {
     }
 }
 
-func unpackKey(key string) (string, string) {
-    pos := strings.IndexByte(key, '/')
-    return key[:pos], key[(pos + 1):]
-}
-
 func main() {
     gpath := flag.String("registry", "", "Path to the gobbler registry")
     surl := flag.String("url", "", "URL of the SewerRat instance")
@@ -59,11 +53,7 @@ func main() {
         os.Exit(1)
     }
 
-    to_reignore := map[string]bool{}
-    to_reregister := map[string]bool{}
     var lock sync.Mutex
-    ch_reignore := make(chan bool)
-    ch_reregister := make(chan bool)
 
     // Timer to inspect logs.
     go func() {
@@ -72,7 +62,7 @@ func main() {
         timer := time.NewTicker(time.Minute * time.Duration(*log_time))
         for {
             lock.Lock()
-            new_last_scan, err := checkLogs(registry, rest_url, to_reignore, to_reregister, last_scan)
+            new_last_scan, err := processLogs(rest_url, registry, last_scan)
             lock.Unlock()
             if err != nil {
                 log.Printf("detected failures for log check; %v", err)
@@ -81,7 +71,6 @@ func main() {
                 last_scan = new_last_scan
                 depositLastScanTime(last_scan, last_scan_path)
             }
-            ch_reignore <- true
             <-timer.C
         }
     }()
@@ -91,52 +80,12 @@ func main() {
         timer := time.NewTicker(time.Hour * time.Duration(*full_time))
         for {
             lock.Lock()
-            err := fullScan(registry, rest_url, to_reignore)
+            err := fullScan(rest_url, registry)
             lock.Unlock()
             if err != nil {
                 log.Printf("detected failures for log check; %v", err)
             }
-            ch_reignore <- true
             <-timer.C
         }
     }()
-
-    // Listener to update the ignore files.
-    go func() {
-        for {
-            <- ch_reignore
-            any_changed := false
-            lock.Lock()
-            for k, _ := range to_reignore {
-                project, asset := unpackKey(k)
-                changed, err := ignoreNonLatest(registry, project, asset)
-                if changed { // this can be used regardless of 'err'.
-                    any_changed = true
-                    to_reregister[project] = true
-                }
-                if err != nil {
-                    log.Printf("failed to ignore latest for %q; %v", k, err)
-                }
-                delete(to_reignore, k)
-            }
-            lock.Unlock()
-            if any_changed {
-                ch_reregister <- true
-            }
-        }
-    }()
-
-    // Listener to re-register projects.
-    for {
-        <- ch_reregister
-        lock.Lock()
-        for project, _ := range to_reregister {
-            err := reregisterProject(rest_url, filepath.Join(registry, project))
-            if err != nil {
-                log.Printf("failed to reregister %q; %v", project, err)
-            }
-            delete(to_reregister, project)
-        }
-        lock.Unlock()
-    }
 }

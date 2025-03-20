@@ -2,42 +2,27 @@ package main
 
 import (
     "os"
-    "io/fs"
     "path/filepath"
     "errors"
     "fmt"
 )
 
-func fullScan(registry string, url string, to_reignore map[string]bool) error {
+func fullScan(rest_url string, registry string) error {
     contents, err := os.ReadDir(registry) 
     if err != nil {
         return fmt.Errorf("failed to read the registry contents; %w", err)
     }
 
     all_errors := []error{}
-
     for _, proj := range contents {
         if !proj.IsDir() {
             continue
         }
-        if proj.Type() & fs.ModeSymlink != 0 { // skip symlinked aliases of versions.
-            continue
-        }
-
         project := proj.Name()
-        is_reg, err := isProjectRegistered(registry, url, project)
+        project_dir := filepath.Join(registry, project)
+        asses, err := os.ReadDir(project_dir)
         if err != nil {
-            all_errors = append(all_errors, err)
-            continue
-        }
-        if !is_reg {
-            continue
-        }
-
-        proj_path := filepath.Join(registry, project)
-        asses, err := os.ReadDir(proj_path)
-        if err != nil {
-            all_errors = append(all_errors, fmt.Errorf("failed to read contents of %q; %w", proj_path, err))
+            all_errors = append(all_errors, fmt.Errorf("failed to list assets for project %q; %w", project, err))
             continue
         }
 
@@ -45,8 +30,18 @@ func fullScan(registry string, url string, to_reignore map[string]bool) error {
             if !ass.IsDir() {
                 continue
             }
-            to_reignore[project + "/" + ass.Name()] = true
+            asset := ass.Name()
+            asset_dir := filepath.Join(project_dir, asset)
+            err := ignoreNonLatest(rest_url, asset_dir, false) // don't forcibly reregister as any file changes should get picked up by SewerRat's own periodic scans.
+            all_errors = append(all_errors, err)
         }
+    }
+
+    // Put this _after_ we check that we can list the contents of the registry,
+    // to avoid premature deregistration upon sporadic unmounting of the registry's FS.
+    err = deregisterMissingSubdirectories(rest_url, registry)
+    if err != nil {
+        all_errors = append(all_errors, err)
     }
 
     if len(all_errors) > 0 {

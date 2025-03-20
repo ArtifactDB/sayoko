@@ -10,14 +10,14 @@ import (
     "errors"
 )
 
-type logPayload struct {
+type logEntry struct {
     Type string `json:"type"`
     Project string `json:"project"`
     Asset string `json:"asset"`
 }
 
-func readLog(logpath string) (logPayload, error) {
-    output := logPayload{}
+func readLog(logpath string) (logEntry, error) {
+    output := logEntry{}
 
     handle, err := os.Open(logpath)
     if err != nil {
@@ -34,7 +34,7 @@ func readLog(logpath string) (logPayload, error) {
     return output, nil
 }
 
-func checkLogs(registry string, rest_url string, to_reignore map[string]bool, to_reregister map[string]bool, last_scan time.Time) (time.Time, error) {
+func processLogs(rest_url string, registry string, last_scan time.Time) (time.Time, error) {
     lpath := filepath.Join(registry, "..logs")
     dirhandle, err := os.Open(lpath)
     if err != nil {
@@ -47,11 +47,11 @@ func checkLogs(registry string, rest_url string, to_reignore map[string]bool, to
         return last_scan, fmt.Errorf("failed to read log directory at %q; %w", lpath, err)
     }
 
-    registered_status := map[string]bool{} 
     all_errors := []error{}
     latest := last_scan
 
-    // No need to process things in order as long as we get everything past the last scan's timepoint.
+    // No need to process things in order as long as we get everything past the last scan's timepoint;
+    // all directories will converge to being registered or not, so it doesn't matter.
     for _, n := range lognames {
         pos := strings.IndexByte(n, '_')
         if pos < 0 {
@@ -78,39 +78,30 @@ func checkLogs(registry string, rest_url string, to_reignore map[string]bool, to
             continue
         }
 
-        if payload.Type == "add-version" || payload.Type == "delete-version" {
+        if payload.Type == "add-version" || payload.Type == "delete-version" || payload.Type == "reindex-version" {
             if payload.Project == "" || payload.Asset == "" {
                 all_errors = append(all_errors, fmt.Errorf("empty project/asset fields in %q", logpath))
                 continue
             }
+            // Forcibly reregister the latest version just to pick up any changes from reindexing.
+            err := ignoreNonLatest(rest_url, filepath.Join(registry, payload.Project, payload.Asset), (payload.Type == "reindex-version"))
+            all_errors = append(all_errors, err)
 
-            status, err := isProjectRegisteredWithCache(registry, rest_url, payload.Project, registered_status)
-            if err != nil {
-                all_errors = append(all_errors, err)
+        } else if payload.Type == "delete-asset" {
+            if payload.Project == "" || payload.Asset == "" {
+                all_errors = append(all_errors, fmt.Errorf("empty project/asset fields in %q", logpath))
                 continue
             }
-            if !status {
-                continue
-            }
+            err := deregisterAllSubdirectories(rest_url, filepath.Join(registry, payload.Project, payload.Asset))
+            all_errors = append(all_errors, err)
 
-            to_reignore[payload.Project + "/" + payload.Asset] = true
-
-        } else {
+        } else if payload.Type == "delete-project" {
             if payload.Project == "" {
-                all_errors = append(all_errors, fmt.Errorf("empty project fields in %q", logpath))
+                all_errors = append(all_errors, fmt.Errorf("empty project field in %q", logpath))
                 continue
             }
-
-            status, err := isProjectRegisteredWithCache(registry, rest_url, payload.Project, registered_status)
-            if err != nil {
-                all_errors = append(all_errors, err)
-                continue
-            }
-            if !status {
-                continue
-            }
-
-            to_reregister[payload.Project] = true
+            err := deregisterAllSubdirectories(rest_url, filepath.Join(registry, payload.Project))
+            all_errors = append(all_errors, err)
         }
     }
 

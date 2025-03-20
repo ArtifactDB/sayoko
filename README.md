@@ -23,7 +23,7 @@ We can then run it as shown below, using an account that has write permissions t
     -url URL_FOR_SEWERRAT_REST_API
 ```
 
-By default, this will scan the log directory every 10 minutes and will do a full registry check every 24 hours.
+By default, this will scan the log directory every 10 minutes and will do a full registry check every 168 hours (i.e., weekly).
 These intervals can be modified with the `-log` and `-full` flags, respectively.
 
 After every log scan, **sayoko** produces a `.sayoko_last_scan` file containing the RFC3339-formatted time of the most recent log.

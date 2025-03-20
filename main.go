@@ -37,7 +37,7 @@ func main() {
     gpath := flag.String("registry", "", "Path to the gobbler registry")
     surl := flag.String("url", "", "URL of the SewerRat instance")
     log_time := flag.Int("log", 10, "Interval in which to check for new logs, in minutes")
-    full_time := flag.Int("full", 24, "Interval in which to do a full check, in hours")
+    full_time := flag.Int("full", 168, "Interval in which to do a full check, in hours")
     tpath := flag.String("timestamp", ".sayoko_last_scan", "Path to the last scan timestamp")
     flag.Parse()
 

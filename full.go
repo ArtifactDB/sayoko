@@ -7,7 +7,7 @@ import (
     "fmt"
 )
 
-func fullScan(rest_url string, registry string) error {
+func fullScan(rest_url string, registry string, names []string) error {
     contents, err := os.ReadDir(registry) 
     if err != nil {
         return fmt.Errorf("failed to read the registry contents; %w", err)
@@ -32,7 +32,7 @@ func fullScan(rest_url string, registry string) error {
             }
             asset := ass.Name()
             asset_dir := filepath.Join(project_dir, asset)
-            err := ignoreNonLatest(rest_url, asset_dir, false) // don't forcibly reregister as any file changes should get picked up by SewerRat's own periodic scans.
+            err := ignoreNonLatest(rest_url, asset_dir, names, false) // don't forcibly reregister as any file changes should get picked up by SewerRat's own periodic scans.
             all_errors = append(all_errors, err)
         }
     }

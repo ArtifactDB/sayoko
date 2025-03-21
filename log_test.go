@@ -81,6 +81,7 @@ func TestProcessLogs(t *testing.T) {
     }
 
     url := getSewerRatUrl()
+    names := []string{ "metadata.json" }
 
     // Adding a new version.
     {
@@ -98,7 +99,7 @@ func TestProcessLogs(t *testing.T) {
             t.Fatalf("failed to create a new log file; %v", err)
         }
 
-        _, err = processLogs(url, registry, last_scan)
+        _, err = processLogs(url, registry, names, last_scan)
         if err != nil {
             t.Fatal(err)
         }
@@ -122,7 +123,7 @@ func TestProcessLogs(t *testing.T) {
         if err != nil {
             t.Fatal(err)
         }
-        err = registerDirectory(url, whee_path, true)
+        err = registerDirectory(url, whee_path, names)
         if err != nil {
             t.Fatal(err)
         }
@@ -146,7 +147,7 @@ func TestProcessLogs(t *testing.T) {
             t.Fatalf("failed to create a new log file; %v", err)
         }
 
-        _, err = processLogs(url, registry, last_scan)
+        _, err = processLogs(url, registry, names, last_scan)
         if err != nil {
             t.Fatal(err)
         }
@@ -170,7 +171,7 @@ func TestProcessLogs(t *testing.T) {
             if err != nil {
                 t.Fatal(err)
             }
-            err = registerDirectory(url, whee_path, true)
+            err = registerDirectory(url, whee_path, names)
             if err != nil {
                 t.Fatal(err)
             }
@@ -195,7 +196,7 @@ func TestProcessLogs(t *testing.T) {
             t.Fatalf("failed to create a new log file; %v", err)
         }
 
-        _, err = processLogs(url, registry, last_scan)
+        _, err = processLogs(url, registry, names, last_scan)
         if err != nil {
             t.Fatal(err)
         }
@@ -218,7 +219,7 @@ func TestProcessLogs(t *testing.T) {
         if err != nil {
             t.Fatal(err)
         }
-        err = registerDirectory(url, whee_path, true)
+        err = registerDirectory(url, whee_path, names)
         if err != nil {
             t.Fatal(err)
         }
@@ -242,7 +243,7 @@ func TestProcessLogs(t *testing.T) {
             t.Fatalf("failed to create a new log file; %v", err)
         }
 
-        _, err = processLogs(url, registry, last_scan)
+        _, err = processLogs(url, registry, names, last_scan)
         if err != nil {
             t.Fatal(err)
         }
@@ -266,7 +267,7 @@ func TestProcessLogs(t *testing.T) {
         if err != nil {
             t.Fatalf("failed to create a new log file; %v", err)
         }
-        _, err = processLogs(url, registry, last_scan)
+        _, err = processLogs(url, registry, names, last_scan)
         if err == nil || !strings.Contains(err.Error(), "empty") {
             t.Error("lack of error when project field is empty")
         }
@@ -275,7 +276,7 @@ func TestProcessLogs(t *testing.T) {
         if err != nil {
             t.Fatalf("failed to create a new log file; %v", err)
         }
-        _, err = processLogs(url, registry, last_scan)
+        _, err = processLogs(url, registry, names, last_scan)
         if err == nil || !strings.Contains(err.Error(), "empty") {
             t.Error("lack of error when asset field is empty")
         }
@@ -284,7 +285,7 @@ func TestProcessLogs(t *testing.T) {
         if err != nil {
             t.Fatalf("failed to create a new log file; %v", err)
         }
-        _, err = processLogs(url, registry, last_scan)
+        _, err = processLogs(url, registry, names, last_scan)
         if err == nil || !strings.Contains(err.Error(), "empty") {
             t.Error("lack of error when asset field is empty")
         }
@@ -293,7 +294,7 @@ func TestProcessLogs(t *testing.T) {
         if err != nil {
             t.Fatalf("failed to create a new log file; %v", err)
         }
-        _, err = processLogs(url, registry, last_scan)
+        _, err = processLogs(url, registry, names, last_scan)
         if err == nil || !strings.Contains(err.Error(), "empty") {
             t.Error("lack of error when project field is empty")
         }
@@ -312,7 +313,7 @@ func TestProcessLogs(t *testing.T) {
         if err != nil {
             t.Fatal(err)
         }
-        err = registerDirectory(url, whee_path, true)
+        err = registerDirectory(url, whee_path, names)
         if err != nil {
             t.Fatal(err)
         }
@@ -349,7 +350,7 @@ func TestProcessLogs(t *testing.T) {
             t.Fatalf("failed to create a new log file; %v", err)
         }
 
-        new_time, err := processLogs(url, registry, last_scan)
+        new_time, err := processLogs(url, registry, names, last_scan)
         if err != nil {
             t.Fatal(err)
         }

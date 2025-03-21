@@ -9,6 +9,7 @@ import (
     "sync"
     "path/filepath"
     "errors"
+    "strings"
 )
 
 func retrieveLastScanTime(last_scan_path string) time.Time {
@@ -39,6 +40,7 @@ func main() {
     log_time := flag.Int("log", 10, "Interval in which to check for new logs, in minutes")
     full_time := flag.Int("full", 168, "Interval in which to do a full check, in hours")
     tpath := flag.String("timestamp", ".sayoko_last_scan", "Path to the last scan timestamp")
+    names_list := flag.String("names", "metadata.json", "Comma-separated list containing the names of metadata files.")
     flag.Parse()
 
     registry := *gpath
@@ -53,6 +55,7 @@ func main() {
         os.Exit(1)
     }
 
+    names := strings.Split(*names_list, ",")
     var lock sync.Mutex
 
     // Timer to inspect logs.
@@ -62,7 +65,7 @@ func main() {
         timer := time.NewTicker(time.Minute * time.Duration(*log_time))
         for {
             lock.Lock()
-            new_last_scan, err := processLogs(rest_url, registry, last_scan)
+            new_last_scan, err := processLogs(rest_url, registry, names, last_scan)
             lock.Unlock()
             if err != nil {
                 log.Printf("detected failures for log check; %v", err)
@@ -79,7 +82,7 @@ func main() {
     timer := time.NewTicker(time.Hour * time.Duration(*full_time))
     for {
         lock.Lock()
-        err := fullScan(rest_url, registry)
+        err := fullScan(rest_url, registry, names)
         lock.Unlock()
         if err != nil {
             log.Printf("detected failures for log check; %v", err)

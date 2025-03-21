@@ -85,7 +85,7 @@ func listRegisteredSubdirectories(rest_url, dir string) ([]string, error) {
     return collected, nil
 }
 
-func registerDirectory(rest_url, dir string, register bool) error {
+func registerDirectoryRaw(rest_url, dir string, names []string, register bool) error {
     endpt := "register"
     msg := "registration"
     if !register {
@@ -94,7 +94,8 @@ func registerDirectory(rest_url, dir string, register bool) error {
     }
 
     {
-        b, err := json.Marshal(map[string]string{ "path": dir })
+        payload := map[string]interface{}{ "path": dir }
+        b, err := json.Marshal(payload)
         if err != nil {
             return fmt.Errorf("failed to create initialization request body for %q; %w", dir, err)
         }
@@ -135,7 +136,11 @@ func registerDirectory(rest_url, dir string, register bool) error {
     }
 
     {
-        b, err := json.Marshal(map[string]string{ "path": dir })
+        payload := map[string]interface{}{ "path": dir }
+        if register && names != nil{
+            payload["base"] = names
+        }
+        b, err := json.Marshal(payload)
         if err != nil {
             return fmt.Errorf("failed to create registration completion request body for %q; %w", dir, err)
         }
@@ -156,28 +161,35 @@ func registerDirectory(rest_url, dir string, register bool) error {
     return nil
 }
 
-func deregisterAllSubdirectories(rest_url, dir string) error {
-    output, err := listRegisteredDirectoriesRaw(rest_url + "/registered?within_path=" + url.QueryEscape(dir))
+func registerDirectory(rest_url, dir string, names []string) error {
+    return registerDirectoryRaw(rest_url, dir, names, true)
+}
+
+func deregisterDirectory(rest_url, dir string) error {
+    return registerDirectoryRaw(rest_url, dir, nil, false)
+}
+
+func deregisterSubdirectoriesRaw(rest_url, dir string, not_exists bool) error {
+    url := rest_url + "/registered?within_path=" + url.QueryEscape(dir)
+    if not_exists {
+        url += "&exists=false"
+    }
+    output, err := listRegisteredDirectoriesRaw(url)
     if err != nil {
         return fmt.Errorf("failed to list subdirectories of %q; %w", dir, err)
     }
     all_errors := []error{}
     for _, val := range output {
-        err := registerDirectory(rest_url, val.Path, false)
+        err := deregisterDirectory(rest_url, val.Path)
         all_errors = append(all_errors, err)
     }
     return errors.Join(all_errors...)
 }
 
+func deregisterAllSubdirectories(rest_url, dir string) error {
+    return deregisterSubdirectoriesRaw(rest_url, dir, false)
+}
+
 func deregisterMissingSubdirectories(rest_url, dir string) error {
-    output, err := listRegisteredDirectoriesRaw(rest_url + "/registered?within_path=" + url.QueryEscape(dir) + "&exists=false")
-    if err != nil {
-        return fmt.Errorf("failed to list subdirectories of %q; %w", dir, err)
-    }
-    all_errors := []error{}
-    for _, val := range output {
-        err := registerDirectory(rest_url, val.Path, false)
-        all_errors = append(all_errors, err)
-    }
-    return errors.Join(all_errors...)
+    return deregisterSubdirectoriesRaw(rest_url, dir, true)
 }

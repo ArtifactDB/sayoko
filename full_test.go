@@ -42,10 +42,11 @@ func TestFullScan(t *testing.T) {
     }
 
     url := getSewerRatUrl()
+    names := []string{ "metadata.json" }
 
     // Initial run registers everything.
     {
-        err := fullScan(url, registry)
+        err := fullScan(url, registry, names)
         if err != nil {
             t.Fatal(err)
         }
@@ -68,7 +69,7 @@ func TestFullScan(t *testing.T) {
             t.Fatal(err)
         }
 
-        err = fullScan(url, registry)
+        err = fullScan(url, registry, names)
         if err != nil {
             t.Fatal(err)
         }

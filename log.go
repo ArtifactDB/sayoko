@@ -34,7 +34,7 @@ func readLog(logpath string) (logEntry, error) {
     return output, nil
 }
 
-func processLogs(rest_url string, registry string, last_scan time.Time) (time.Time, error) {
+func processLogs(rest_url string, registry string, names []string, last_scan time.Time) (time.Time, error) {
     lpath := filepath.Join(registry, "..logs")
     dirhandle, err := os.Open(lpath)
     if err != nil {
@@ -83,8 +83,12 @@ func processLogs(rest_url string, registry string, last_scan time.Time) (time.Ti
                 all_errors = append(all_errors, fmt.Errorf("empty project/asset fields in %q", logpath))
                 continue
             }
-            // Forcibly reregister the latest version just to pick up any changes from reindexing.
-            err := ignoreNonLatest(rest_url, filepath.Join(registry, payload.Project, payload.Asset), (payload.Type == "reindex-version"))
+            err := ignoreNonLatest(
+                rest_url,
+                filepath.Join(registry, payload.Project, payload.Asset),
+                names,
+                (payload.Type == "reindex-version"), // Immediately pick up any changes from reindexing.
+            )
             all_errors = append(all_errors, err)
 
         } else if payload.Type == "delete-asset" {

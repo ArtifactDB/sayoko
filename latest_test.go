@@ -70,11 +70,12 @@ func TestIgnoreNonLatest(t *testing.T) {
         }
     }
 
+    names := []string{ "metadata.json" }
     url := getSewerRatUrl()
 
     // Simple initial run.
     {
-        err := ignoreNonLatest(url, asset_dir, false)
+        err := ignoreNonLatest(url, asset_dir, names, false)
         if err != nil {
             t.Fatal(err)
         }
@@ -96,7 +97,7 @@ func TestIgnoreNonLatest(t *testing.T) {
             t.Fatalf("failed to update the ..latest file; %v", err)
         }
 
-        err = ignoreNonLatest(url, asset_dir, false)
+        err = ignoreNonLatest(url, asset_dir, names, false)
         if err != nil {
             t.Fatal(err)
         }
@@ -118,7 +119,7 @@ func TestIgnoreNonLatest(t *testing.T) {
             t.Fatalf("failed to remove the ..latest file; %v", err)
         }
 
-        err := ignoreNonLatest(url, asset_dir, false)
+        err := ignoreNonLatest(url, asset_dir, names, false)
         if err != nil {
             t.Fatal(err)
         }
@@ -140,7 +141,7 @@ func TestIgnoreNonLatest(t *testing.T) {
             t.Fatalf("failed to write to the ..latest file; %v", err)
         }
 
-        err = ignoreNonLatest(url, asset_dir, false)
+        err = ignoreNonLatest(url, asset_dir, names, false)
         if err != nil {
             t.Fatal(err)
         }
@@ -159,7 +160,7 @@ func TestIgnoreNonLatest(t *testing.T) {
             t.Fatal(err)
         }
 
-        err = ignoreNonLatest(url, asset_dir, false)
+        err = ignoreNonLatest(url, asset_dir, names, false)
         if err != nil {
             t.Fatal(err)
         }
@@ -172,7 +173,7 @@ func TestIgnoreNonLatest(t *testing.T) {
         }
 
         // But if we do force it, we should see an error because the directory doesn't exist.
-        err = ignoreNonLatest(url, asset_dir, true)
+        err = ignoreNonLatest(url, asset_dir, names, true)
         if err == nil || !strings.Contains(err.Error(), "does not exist") {
             t.Error("expected an error from forced reregistration")
         }

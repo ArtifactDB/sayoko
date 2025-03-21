@@ -23,13 +23,20 @@ We can then run it as shown below, using an account that has write permissions t
     -url URL_FOR_SEWERRAT_REST_API
 ```
 
-By default, this will scan the log directory every 10 minutes and will do a full registry check every 168 hours (i.e., weekly).
-These intervals can be modified with the `-log` and `-full` flags, respectively.
+Options include:
 
-After every log scan, **sayoko** produces a `.sayoko_last_scan` file containing the RFC3339-formatted time of the most recent log.
-This avoids redundant re-processing of the same log files when **sayoko** itself is restarted.
+- `-names`, a comma-separated list of names of metadata files to be indexed.
+  If not provided, this defaults to `metadata.json`.
+- `-log`, the interval between scans of the Gobbler log directory, in minutes.
+  This defaults to 10 minutes.
+- `-full`, the interval between full scans of the Gobbler registry, in hours.
+  This defaults to 168 hours (i.e., weekly).
+- `-timestamp`, a path to a file in which **sayoko** can store the timestamp of the last log scan.
+  This defaults to `.sayoko_last_scan`.
+
+More specifically: after every log scan, **sayoko** produces a timestamp file containing the RFC3339-formatted time of the most recent log.
+This prevents redundant re-processing of the same log files when **sayoko** itself is restarted.
 Advanced users can exploit this by modifying the timestamp in this file to force **sayoko** to process logs after a desired timepoint.
-The path of this timestamp file can also be modified via the `-timestamp` flag.
 
 ## Developer notes
 

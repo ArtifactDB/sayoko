@@ -5,6 +5,10 @@ import (
     "os"
     "sort"
     "path/filepath"
+    "encoding/json"
+    "fmt"
+    "bytes"
+    "net/http"
 )
 
 func getSewerRatUrl() string {
@@ -45,15 +49,16 @@ func setupDirectories() ([]string, error) {
     }
 
     url := getSewerRatUrl()
-    err = registerDirectory(url, dir1, true)
+    names := []string{ "metadata.json" }
+    err = registerDirectory(url, dir1, names)
     if err != nil {
         return nil, err
     }
-    err = registerDirectory(url, dir2, true)
+    err = registerDirectory(url, dir2, names)
     if err != nil {
         return nil, err
     }
-    err = registerDirectory(url, dir3, true)
+    err = registerDirectory(url, dir3, names)
     if err != nil {
         return nil, err
     }
@@ -145,5 +150,87 @@ func TestDeregisterMissingSubdirectories(t *testing.T) {
     }
     if len(found) != 1 || found[0] != "FOO" {
         t.Errorf("only missing directories should have been deregistered; %v", found)
+    }
+}
+
+func TestRegisterDirectoryNames(t *testing.T) {
+    dir, err := os.MkdirTemp("", "")
+    if err != nil {
+        t.Fatal(err)
+    }
+
+    err = os.WriteFile(filepath.Join(dir, "foo.json"), []byte("{ \"first\": \"athena\", \"last\": \"glory\", \"show\": \"aria the animation\" }"), 0644)
+    if err != nil {
+        t.Fatal(err)
+    }
+    err = os.WriteFile(filepath.Join(dir, "metadata.json"), []byte("{ \"series\": \"aria\", \"season\": 3 }"), 0644)
+    if err != nil {
+        t.Fatal(err)
+    }
+
+    url := getSewerRatUrl()
+    defer deregisterDirectory(url, dir) // to avoid affecting other tests.
+
+    querySewerRat := func(query string) ([]string, error) {
+        b, err := json.Marshal(map[string]interface{}{ "type": "text", "text": query })
+        if err != nil {
+            return nil, fmt.Errorf("failed to create query request body; %w", err)
+        }
+
+        r := bytes.NewReader(b)
+        resp, err := http.Post(url + "/query", "application/json", r)
+        if err != nil {
+            return nil, fmt.Errorf("failed to request query; %w", err)
+        }
+        defer resp.Body.Close()
+
+        if resp.StatusCode >= 300 {
+            err := parseFailure(resp)
+            return nil, fmt.Errorf("failed query; %w", err)
+        }
+
+        type queryHit struct {
+            Path string `json:"path"`
+        }
+        type allQueryHits struct {
+            Results []queryHit `json:"results"`
+        }
+        dec := json.NewDecoder(resp.Body)
+        decoded := allQueryHits{}
+        err = dec.Decode(&decoded)
+        if err != nil {
+            return nil, fmt.Errorf("failed to parse query response; %w", err) 
+        }
+
+        output := []string{}
+        for _, q := range decoded.Results {
+            output = append(output, q.Path)
+        }
+        return output, nil
+    }
+
+    err = registerDirectory(url, dir, []string{ "foo.json" })
+    if err != nil {
+        t.Fatal(err)
+    }
+    output, err := querySewerRat("athena")
+    if err != nil {
+        t.Fatal(err)
+    }
+    if len(output) != 1 || filepath.Base(output[0]) != "foo.json" {
+        t.Errorf("unexpected query result when registering foo.json; %v", output)
+    }
+
+    err = registerDirectory(url, dir, []string{ "foo.json", "metadata.json" })
+    if err != nil {
+        t.Fatal(err)
+    }
+    output, err = querySewerRat("aria")
+    if err != nil {
+        t.Fatal(err)
+    }
+    sort.Strings(output)
+    if len(output) != 2 || filepath.Base(output[0]) != "foo.json" || filepath.Base(output[1]) != "metadata.json" {
+        t.Errorf("unexpected query result when registering both foo.json and metadata.json; %v", output)
     }
 }

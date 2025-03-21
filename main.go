@@ -76,16 +76,14 @@ func main() {
     }()
 
     // Timer to scan the entire registry.
-    go func() {
-        timer := time.NewTicker(time.Hour * time.Duration(*full_time))
-        for {
-            lock.Lock()
-            err := fullScan(rest_url, registry)
-            lock.Unlock()
-            if err != nil {
-                log.Printf("detected failures for log check; %v", err)
-            }
-            <-timer.C
+    timer := time.NewTicker(time.Hour * time.Duration(*full_time))
+    for {
+        lock.Lock()
+        err := fullScan(rest_url, registry)
+        lock.Unlock()
+        if err != nil {
+            log.Printf("detected failures for log check; %v", err)
         }
-    }()
+        <-timer.C
+    }
 }

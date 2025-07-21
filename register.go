@@ -49,25 +49,45 @@ type registeredDirectory struct {
 }
 
 func listRegisteredDirectoriesRaw(url string) ([]registeredDirectory, error) {
-    resp, err := http.Get(url)
-    if err != nil {
-        return nil, err
-    }
-    defer resp.Body.Close()
-
-    if resp.StatusCode != 200 {
-        err := parseFailure(resp)
-        return nil, err
-    }
-
-    dec := json.NewDecoder(resp.Body)
     output := []registeredDirectory{}
-    err = dec.Decode(&output)
-    if err != nil {
-        return nil, err
+
+    for url != "" {
+        err := func() error { // wrap in a function so that body is closed in a timely fashion.
+            resp, err := http.Get(url)
+            if err != nil {
+                return err
+            }
+            defer resp.Body.Close()
+
+            if resp.StatusCode != 200 {
+                err := parseFailure(resp)
+                return err
+            }
+
+            payload := struct {
+                Results []registeredDirectory
+                Next string
+            }{}
+
+            dec := json.NewDecoder(resp.Body)
+            err = dec.Decode(&payload)
+            if err != nil {
+                return err
+            }
+
+            if len(payload.Results) > 0 {
+                output = append(output, (payload.Results)...)
+            }
+            url = payload.Next
+            return nil
+        }()
+
+        if err != nil {
+            return nil, err
+        }
     }
 
-    return output, err
+    return output, nil 
 }
 
 func listRegisteredSubdirectories(rest_url, dir string) ([]string, error) {

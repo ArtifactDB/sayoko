@@ -78,6 +78,6 @@ jobs:
           goos: ${{ matrix.os }}
           goarch: ${{ matrix.arch }}
           release_tag: latest
-          asset_name: SewerRat-${{ matrix.os }}-${{ matrix.arch }}
+          asset_name: sayoko-${{ matrix.os }}-${{ matrix.arch }}
           overwrite: true
           compress_assets: false
